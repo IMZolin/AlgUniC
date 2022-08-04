@@ -1,118 +1,95 @@
+#include <stdio.h>
 #include "labengine.h"
 #include <math.h>
-#include <stdlib.h>
-//Параметры для построения правильного многоугольника
-struct Poly_t {
-    int X; //координата OX центра многоугольника
-    int Y; //координата OY центра многоугольника
-    int N;
-    double angle;// угол
-    int R;
-    //int C;
-}polygon;
+#define MAX_DISTANCE    2.0
+#define MAX_ITERATIONS  1023
 
 
-int Random(int a, int b);
-void DrawMyPoly(struct Poly_t* p);
-
-int main(void)
-
+/*
+* @brief Точка и её координаты
+* @param x абцисса точки
+* @param y ордината точки
+*/
+typedef struct
 {
-    // Инициализировать библиотеку
+    double x;
+    double y;
+}point_t;
+
+/*
+*@brief Параметры системы координат(прямоугольника, области координат)
+*@param x1
+*@param x2
+*@param y1
+*@param y2
+*/
+typedef struct
+{
+    point_t A;
+    point_t C;
+}rect_t;
+
+typedef struct {
+    unsigned char r, g, b;
+} color_t;
+
+static color_t s_palette[] = {
+        {0x00, 0x00, 0xFF},
+        {0x00, 0xFF, 0xFF},
+        {0xFF, 0xFF, 0x00},
+        {0xFF, 0x00, 0x00},
+        {0xFF, 0xFF, 0x00},
+        {0x00, 0xFF, 0xFF},
+        {0x00, 0x00, 0xFF},
+};
+
+const int MAX_COLORS = sizeof(s_palette) / sizeof(s_palette[0]);
+
+point_t Transform(point_t p, rect_t const* from, rect_t const* to);
+void DrawAxes(rect_t const* math, rect_t const* screen);
+int IsOutsideJulia(point_t p);
+void DrawJulia(rect_t const* math, rect_t const* screen);
+int IsOutsideMandelbrot(point_t p);
+void DrawMandelbrot(rect_t const* math, rect_t const* screen);
+color_t DetermineColor(double n);
+
+
+/*
+*@brief Определение цвета
+*@param n
+*/
+color_t DetermineColor(double n)
+{
+    double t = n / (MAX_ITERATIONS + 1.0);
+    t = t * t * t*(MAX_COLORS - 1.0);
+    int k = t;//берётся целая часть от t
+    double a = t - k; //берётся дробная часть от t
+    color_t color;
+    color.r = (1 - a) * s_palette[k].r + a * s_palette[k + 1].r;
+    color.g = (1 - a) * s_palette[k].g + a * s_palette[k + 1].g;
+    color.b = (1 - a) * s_palette[k].b + a * s_palette[k + 1].b;
+
+    return color;
+}
+
+int main()
+{
     if (LabInit())
     {
-
-        /*// Узнать размеры окна
         int width = LabGetWidth();
         int height = LabGetHeight();
-        //Данные и фигуры для Задания №2
-        int xc = height / 6; //координата OX центра многоугольника
-        int yc = width / 7; //координата OY центра многоугольника
-        int num_corners = 0;
+        rect_t math = { {-2, 3},{ 2, -3} };
+        rect_t math_poq = { -0.7454356, 0.113019, -0.7454215, 0.1129986 };
+        rect_t screenL = { 0, 0, width / 2, height };
+        rect_t screenR = { width / 2, 0, width, height };
+        rect_t screenC = { (double)(width - height), 0, (double)((width - height) + height * 2) / 3, (double)height };
 
-        const double PI = 3.14;
-        const double RADIUS = height / 2;
+        DrawAxes(&math, &screenL);
+        DrawAxes(&math_poq, &screenR);
+        DrawJulia(&math, &screenL);
+        DrawMandelbrot(&math_poq, &screenR);
 
-        double fi = 0.0;// угол
-        double prx = 0.0;//проекция отрезка на ось OX
-        double pry = 0.0;//проекция отрезка на ось OY
-        */
-        /*
-        * // Нарисовать красный прямоугольник
-        LabSetColor(LABCOLOR_RED);
-        LabDrawRectangle(0, 0, width, height);
-
-
-        //Данные и фигуры для Задания №1
-        //Нарисовать светлосерые оси координат
-        LabSetColor(LABCOLOR_LIGHT_GREY);
-        LabDrawLine(1, height / 2, width - 1, height / 2);//Ось ОХ
-        LabDrawLine(width / 2, 1, width / 2, height - 1);//Ось ОY
-        // Нарисовать зелёный отрезок
-        LabSetColor(LABCOLOR_GREEN);
-        LabDrawLine(width/2, height/2, 7*width/8, height/2);
-
-        //Нарисовать синюю окружность
-        LabSetColor(LABCOLOR_DARK_CYAN);
-        LabDrawCircle(width/2,height/2, RADIUS);
         LabDrawFlush();
-
-
-
-        while (!LabInputKeyReady())
-        {
-        //отрезок в действующем положении
-        LabSetColor(LABCOLOR_GREEN);
-        LabDrawLine(width / 2, height / 2, width/2 + RADIUS*cos(fi),height/2 + RADIUS * sin(fi));
-        prx = width / 2 + RADIUS * cos(fi);
-        pry = height / 2 + RADIUS * sin(fi);
-
-
-
-        if (fi != 0)
-        {
-        //Проекции действующего отрезка
-        LabSetColor(LABCOLOR_DARK_MAGENTA);
-        LabDrawLine(width / 2, height / 2, prx, height / 2);
-        LabDrawLine(width / 2, height / 2, width / 2, pry);
-        //LabInputKey();
-        }
-
-        //Выводим только действующий отрезок
-        LabDrawFlush();
-        //Очищаем действующий отрезок, с помощью заливки его чёрным цветом
-        LabSetColor(LABCOLOR_BLACK);
-        LabDrawLine(width / 2, height / 2, width / 2 + RADIUS * cos(fi), height / 2 + RADIUS * sin(fi));
-        LabDelay(10);
-        if (fi == 0)
-        {
-        LabSetColor(LABCOLOR_LIGHT_GREY);
-        LabDrawLine(width / 2, height / 2, width - 1, height / 2);
-        }
-        fi -= 0.1;
-        }
-        */
-        int width = LabGetWidth();
-        int height = LabGetHeight();
-
-        //Выбираем случайные цвета
-        int r_255 = Random(0, 255);
-        int g_255 = Random(0, 255);
-        int b_255 = Random(0, 255);
-        LabSetColorRGB(r_255, g_255, b_255);
-
-        //Структура параметров правильного многоугольника
-        struct Poly_t arg;
-        arg.X = height / 2;
-        arg.Y = width / 2;
-        arg.N = 3;
-        arg.angle = 0.71;
-        arg.R = height / 4;
-        //arg.C = (int)LabSetColorRGB;
-
-        DrawMyPoly(&arg);
-
-        // Подождать нажатия клавиши и закончить работу
         LabInputKey();
         LabTerm();
     }
@@ -120,65 +97,158 @@ int main(void)
 }
 
 
-/**
-* @brief Случайное число из диапазона
-* @param a нижняя граница
-* @param b верхняя раница
+/*
+*@brief Преобразование координаты точки из одной произвольной прямоугольной области в другую
+*@param p Точка с координатами в математической СК
+*@param from Ск, из которой мы переводим (математическая СК)
+*@param to СК, в которую мы переводим (экранная СК)
 */
-
-int Random(int a, int b)
+point_t Transform(point_t p, rect_t const* from, rect_t const* to)
 {
+    point_t q;
+    q.x = (p.x - from->A.x) * (to->C.x - to->A.x) / (from->C.x - from->A.x) + to->A.x;
+    q.y = (p.y - from->A.y) * (to->C.y - to->A.y) / (from->C.y - from->A.y) + to->A.y;
+    return q;
+}
 
-    return rand() % (b - a + 1) + a;
+/*
+*@brief Рисование осей координат
+*@param math Математическая СК
+*@param screen Экранная СК
+*/
+void DrawAxes(rect_t const* math, rect_t const* screen)
+{
+    int width = LabGetWidth();
+    int height = LabGetHeight();
+    point_t math_o = { 0,0 };
+    point_t screen_o = { 0,0 };
+    screen_o = Transform(math_o, math, screen);
+    LabSetColor(LABCOLOR_WHITE);
+    LabDrawLine(0, (int)screen_o.y, (int)(screen_o.x * 2), (int)screen_o.y);
+    LabDrawLine((int)screen_o.x, 0, (int)screen_o.x, (int)(screen_o.y * 2));
+}
+
+
+
+/*
+*@brief Проверка что точка находится в множестве Жюлиа
+*@param p Точка
+*/
+int IsOutsideJulia(point_t p)
+{
+    point_t c = { -0.835, 0.2321 };
+    point_t z = { 0,0 };
+
+    for (int i = 0; i < MAX_ITERATIONS; i++)
+    {
+        z.x = p.x * p.x - p.y * p.y + c.x;
+        z.y = 2 * p.x * p.y + c.y;
+
+        if ((z.x * z.x) + (z.y * z.y) > MAX_DISTANCE * MAX_DISTANCE)
+        {
+
+            return MAX_ITERATIONS - i;
+
+        }
+        p.x = z.x;
+        p.y = z.y;
+
+    }
+    return LAB_FALSE;
 
 }
 
 
-/**
-* @brief Рисование многоугольника
-* @param xc координата OX центра многоугольника
-* @param yc координата OY центра многоугольника
-* @param fi первый угол
-* @param polyrad радиус
-* @param num_corners кол-во углов
+/*
+*@brief Рисование множества Жюлиа
+*@param math Математическая СК
+*@param screen Экранная СК
 */
-void DrawMyPoly(struct Poly_t* p) {
-    int width = LabGetWidth();
-    int height = LabGetHeight();
+void DrawJulia(rect_t const* math, rect_t const* screen)
+{
+    point_t p = { screen->A.x, screen->A.y };
+    point_t pmath = { math->A.x, math->A.x };
+    point_t c = { p.x, p.y };
+    color_t color = { 0 };
+    int n = 0;
+    for (; p.x < screen->C.x; p.x++)
+    {
+        for (p.y = screen->A.y; p.y < screen->C.y; p.y++)
+        {
+            pmath = Transform(p, screen, math);
+            n = IsOutsideJulia(pmath);
+            if (n != 0)
+            {
 
-    const double PI = 3.14;
-    //Нарисовать синюю окружность
-    LabSetColor(LABCOLOR_DARK_CYAN);
-    LabDrawCircle(p->X, p->Y, p->R);
-    LabDrawFlush();
 
-    int x = p->X + p->R * cos(p->angle);
-    int y = p->X + p->R * sin(p->angle);
-    int x_old = x;
-    int y_old = y;
-    double delta = 2 * PI / p->N;
-    while (LabInputKeyReady() == LAB_FALSE) {
-        LabSetColor(LABCOLOR_DARK_CYAN);
-        LabDrawCircle(p->X, p->Y, p->R);
-        for (int i = 0; i <= p->N; i++) {
-            x_old = x;
-            y_old = y;
-            x = p->X + p->R * cos(p->angle + delta * i);
-            y = p->Y + p->R * sin(p->angle + delta * i);
-            if (i != 0) {
-                LabSetColor(LABCOLOR_GREEN);
-                LabDrawLine(x_old, y_old, x, y);
-                //LabSetColor(LABCOLOR_LIGHT_GREY);
-                //LabDrawLine(p->X, p->Y, x, y);
+                color = DetermineColor(n);
+                LabSetColorRGB(color.r, color.g, color.b);
+                LabDrawPoint((int)p.x, (int)p.y);
+
 
             }
 
         }
-        LabDelay(100);
-        LabDrawFlush();
-        p->angle += 0.1;
-        LabClear();
     }
+}
 
+/*
+*@brief Проверка что точка находится в множестве Мандельброта
+*@param p Точка
+*/
+int IsOutsideMandelbrot(point_t c)
+{
+    point_t p = { 0,0 };
+    point_t z = { 0,0 };
+
+    for (int i = 0; i < MAX_ITERATIONS; i++)
+    {
+        z.x = p.x * p.x - p.y * p.y + c.x;
+        z.y = 2 * p.x * p.y + c.y;
+
+        if ((z.x * z.x) + (z.y * z.y) > MAX_DISTANCE * MAX_DISTANCE)
+        {
+            return MAX_ITERATIONS - i;
+        }
+        p.x = z.x;
+        p.y = z.y;
+    }
+    return LAB_FALSE;
 
 }
+
+/*
+*@brief Рисование множества Мандельброта
+*@param math Математическая СК
+*@param screen Экранная СК
+*/
+void DrawMandelbrot(rect_t const* math, rect_t const* screen)
+{
+    point_t p = { screen->A.x, screen->A.y };
+    point_t pmath = { math->A.x, math->A.y };
+    point_t c = { p.x, p.y };
+    int n = 0;
+    color_t color = {0};
+    for (; p.x < screen->C.x; p.x++)
+    {
+        for (p.y = screen->A.y; p.y < screen->C.y; p.y++)
+        {
+            pmath = Transform(p, screen, math);
+            c.x = pmath.x;
+            c.y = pmath.y;
+            n = IsOutsideMandelbrot(pmath);
+            color = DetermineColor(n);
+            LabSetColorRGB(color.r, color.g, color.b);
+            LabDrawPoint((int)p.x, (int)p.y);
+
+
+        }
+    }
+
+}
+
+
+
+
+
+
