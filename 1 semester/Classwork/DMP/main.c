@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<ctype.h>
 #include<string.h>
+#include <stdlib.h>
 void FillInt(int a[], int size)
 {
     int i = 0;
