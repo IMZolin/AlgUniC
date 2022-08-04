@@ -1,0 +1,3 @@
+D:/Projects/Programming/Algorithms_university/2 semester/Classwork/GON/cmake-build-debug/CMakeFiles/GON.dir
+D:/Projects/Programming/Algorithms_university/2 semester/Classwork/GON/cmake-build-debug/CMakeFiles/edit_cache.dir
+D:/Projects/Programming/Algorithms_university/2 semester/Classwork/GON/cmake-build-debug/CMakeFiles/rebuild_cache.dir
